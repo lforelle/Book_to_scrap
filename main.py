@@ -1,10 +1,16 @@
 import requests
 from bs4 import BeautifulSoup
 import csv
-
+from datetime import datetime
 
 def data_to_save_to_csv(dico_infos):
-    with open("output.csv", "w", newline="", encoding="utf-8") as output_csv:
+    # Horodatage
+    now = datetime.now()
+    current_date_time = now.strftime("%Y%m%d_%H%M%S")
+
+    # Nom du fichier output.csv a horodater
+    output_filename = "Extract_books_B2S_" + current_date_time + ".csv"
+    with open(output_filename, "w", newline="", encoding="utf-8") as output_csv:
         # Les clefs en titre de colonnes
         fieldnames = dico_infos.keys()
         writer = csv.DictWriter(output_csv, fieldnames=fieldnames)
@@ -12,14 +18,10 @@ def data_to_save_to_csv(dico_infos):
         writer.writerow(dico_infos)
 
 
-def ajouter_infos_produit(th, tr, dico_infos):
-    data = tr.find("td")
-    dico_infos[th.text] = data.text
-
-
 def main():
     # page du livre:'A Light in the Attic'
     page_url = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
+    currency = "£"
 
     response = requests.get(page_url)
     if response.status_code == 200:
@@ -33,20 +35,30 @@ def main():
         dico_infos = {}
         dico_infos["product_page_url"] = page_url
 
+        # On boucle sur les lignes <tr> et <th>. Si le contenu <th> match le motif
+        # alors on copie le texte <td> correspondant dans le dico
         for tr in table.find_all("tr"):
             for th in tr.find_all("th"):
-                if th.text.lower() == "upc":
-                    ajouter_infos_produit(th, tr, dico_infos)
-                if th.text.lower() == "product type":
-                    ajouter_infos_produit(th, tr, dico_infos)
-                if th.text.lower() == "price (incl. tax)":
-                    ajouter_infos_produit(th, tr, dico_infos)
-                if th.text.lower() == "price (excl. tax)":
-                    ajouter_infos_produit(th, tr, dico_infos)
-                if th.text.lower() == "tax":
-                    ajouter_infos_produit(th, tr, dico_infos)
-                if th.text.lower() == "availability":
-                    ajouter_infos_produit(th, tr, dico_infos)
+                if th.text.strip().lower() == "upc":
+                    dico_infos[th.text] = tr.find("td").get_text(strip=True)
+                # if th.text.strip().lower() == "product type":
+                #     dico_infos[th.text] = tr.find("td").get_text(strip=True)
+                if th.text.strip().lower() == "price (incl. tax)":
+                    raw_taxed_price = tr.find("td").get_text(strip=True)
+                    taxed_price = raw_taxed_price.split(currency)[1] + currency
+                    dico_infos[th.text] = taxed_price
+                if th.text.strip().lower() == "price (excl. tax)":
+                    raw_free_price = tr.find("td").get_text(strip=True)
+                    free_price = raw_free_price.split(currency)[1] + currency
+                    dico_infos[th.text] = free_price
+                if th.text.strip().lower() == "tax":
+                    raw_tax = tr.find("td").get_text(strip=True)
+                    tax = raw_tax.split(currency)[1] + currency
+                    dico_infos[th.text] = tax
+                if th.text.strip().lower() == "availability":
+                    raw_availibility = tr.find("td").get_text(strip=True)
+                    availibility = (raw_availibility.split("(")[1]).split(" ")[0]
+                    dico_infos[th.text] = availibility
 
         # Le titre du produit se trouve dans le tag <h1> qui est contenu dans un <div> avec la classe "col-sm-6 product_main"
         title = soup.find("div", class_="col-sm-6 product_main").find("h1").text
@@ -71,8 +83,12 @@ def main():
         # Recup du nb d'etoiles (review_rating)
         star_rating = soup.find("i", class_="icon-star").find_parent("p")
         review_rating = star_rating.get("class")
-        dico_infos["review_rating"] = review_rating[1]
-
+        nb_stars_en = review_rating[1].lower()
+        # Conversion des notations string en numerique
+        nb_stars = {"one":1, "two": 2, "three": 3, "four": 4, "five": 5}
+        nb_stars_fr = nb_stars[nb_stars_en]
+        dico_infos["review_rating"] = nb_stars_fr
+        
         # L'url de l'image
         image_url = soup.find(id="product_gallery").find("img")
 
