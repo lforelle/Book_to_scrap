@@ -1,88 +1,143 @@
-# Scraper de produit - Books to Scrape
+# Scraper Books to Scrape
 
-Ce script Python permet de récupérer les informations d'un livre depuis la page produit de [Books to Scrape](https://books.toscrape.com/) puis de les enregistrer dans un fichier CSV.
+Ce projet contient deux scripts Python permettant de récupérer les
+informations de livres sur le site [Books to Scrape](https://books.toscrape.com/).
 
-## Objectif
+## Fonctionnalités actuelles
 
-Le script charge la page du livre :
+### Extraction d'un livre
 
-- A Light in the Attic
+Le script [`book_details.py`](book_details.py) :
 
-puis extrait les données suivantes :
+- télécharge la page d'un livre ;
+- extrait les informations présentes dans la fiche produit ;
+- convertit la note en nombre d'étoiles ;
+- transforme l'URL relative de l'image en URL absolue ;
+- ajoute la date et l'heure au nom du fichier de sortie ;
+- enregistre les données dans un fichier CSV.
 
-- URL de la page produit
-- UPC
-- titre
-- type de produit
-- prix TTC
-- prix HT
-- taxe
-- disponibilité
-- description du produit
-- catégorie
-- note de review
-- URL de l'image
+Les informations récupérées sont :
 
-## Fonctionnement
+- `product_page_url` : URL de la page produit ;
+- `UPC` : code produit universel ;
+- `Price (excl. tax)` : prix hors taxes ;
+- `Price (incl. tax)` : prix toutes taxes comprises ;
+- `Tax` : montant de la taxe ;
+- `Availability` : quantité disponible ;
+- `title` : titre du livre ;
+- `product_description` : description du livre ;
+- `category` : catégorie ;
+- `review_rating` : note de une à cinq étoiles ;
+- `image_url` : URL absolue de l'image.
 
-Le programme utilise :
+### Extraction d'une catégorie
 
-- `requests` pour télécharger la page HTML
-- `BeautifulSoup` pour analyser le contenu HTML
-- `csv` pour écrire les données dans un fichier `output.csv`
+Le script [`category.py`](category.py) :
 
-Il repère les éléments du HTML avec des sélecteurs comme :
+- cible actuellement la catégorie **Art** ;
+- récupère les liens des livres affichés sur la page de catégorie ;
+- enregistre ces liens dans un fichier CSV ;
+- appelle [`book_details.py`](book_details.py) pour extraire les informations
+  de chaque livre ;
+- regroupe les données détaillées dans un fichier CSV horodaté.
 
-- `table.table.table-striped` pour la table technique du produit
-- `div.col-sm-6.product_main h1` pour le titre
-- `h2` avec le texte `Product Description` pour la description
-- `ul.breadcrumb` pour retrouver la catégorie
-- `id="product_gallery"` pour l'image
+## Organisation des fichiers
 
-## Prérequis
+| Fichier | Rôle |
+| --- | --- |
+| `book_details.py` | Extraction des informations d'un livre |
+| `category.py` | Extraction des livres d'une catégorie et lancement de l'extraction détaillée |
+| `requirements.txt` | Dépendances Python du projet |
+| `book_detail_YYYYMMDD_HHMM.csv` | Données détaillées des livres |
+| `books_by_category_Art_YYYYMMDD_HHMM.csv` | Catégorie et liens des livres récupérés |
 
-Installez les dépendances nécessaires :
+Les fichiers CSV sont nommés avec le format `YYYYMMDD_HHMM`. Le fichier est
+créé dans le dossier du projet. Lorsqu'un fichier portant le même nom existe,
+les nouvelles lignes sont ajoutées en conservant l'en-tête existant.
+
+## Installation
+
+Il est recommandé d'utiliser un environnement virtuel :
 
 ```bash
-pip install requests beautifulsoup4
+python -m venv env
 ```
+
+Activation sous Linux ou macOS :
+
+```bash
+source env/bin/activate
+```
+
+Activation sous Windows :
+
+```powershell
+env\Scripts\activate
+```
+
+Installation des dépendances :
+
+```bash
+pip install -r requirements.txt
+```
+
+Les principales bibliothèques utilisées sont :
+
+- `requests` pour effectuer les requêtes HTTP ;
+- `beautifulsoup4` pour analyser le HTML ;
+- `csv` pour écrire les résultats ;
+- `datetime` et `os` pour horodater et gérer les fichiers ;
+- `urllib.parse.urljoin` pour construire les URLs absolues.
 
 ## Utilisation
 
-Lancez le script :
+### Extraire un seul livre
 
 ```bash
-python main.py
+python book_details.py
 ```
 
-Le fichier généré sera :
+Par défaut, le script traite la page **A Light in the Attic** :
+
+```text
+https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html
+```
+
+Le résultat est enregistré dans un fichier dont le nom commence par
+`book_detail_`.
+
+### Extraire une catégorie
 
 ```bash
-output.csv
+python category.py
 ```
 
-## Exemple de sortie
+Le script traite par défaut la catégorie **Art** :
 
-Le script crée un dictionnaire contenant les informations extraites, puis l'écrit dans le CSV avec les clés comme en-têtes de colonnes.
-
-Exemple de structure :
-
-```python
-{
-    'product_page_url': 'https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html',
-    'UPC': 'a897fe39b1053632',
-    'title': 'A Light in the Attic',
-    'category': 'Poetry',
-    'product_description': '...'
-}
+```text
+https://books.toscrape.com/catalogue/category/books/art_25/index.html
 ```
 
-## Fichier produit
+Deux types de fichiers sont alors générés :
 
-Le script génère un fichier CSV nommé `output.csv`, avec les colonnes correspondant aux champs récupérés.
+1. `books_by_category_Art_YYYYMMDD_HHMM.csv`, contenant la catégorie et les
+   URLs des livres trouvés ;
+2. `book_detail_YYYYMMDD_HHMM.csv`, contenant les informations détaillées de
+   chaque livre.
 
-## Notes
+## Limites actuelles
 
-- La page ciblée est codée en dur dans le script.
-- Le script est adapté à un seul produit, pas encore à la récupération de plusieurs livres ou d'une catégorie complète.
-- Le site de test est volontairement simple et conçu pour l'entraînement au web scraping.
+- Les URLs du livre et de la catégorie sont définies directement dans les
+  scripts.
+- La pagination des catégories n'est pas encore gérée : seule la page de
+  catégorie configurée est parcourue.
+- Une seule catégorie est traitée par exécution de `category.py`.
+- Les images sont référencées dans le CSV, mais ne sont pas téléchargées
+  localement.
+- La gestion des erreurs HTTP est présente pour l'extraction d'un livre, mais
+  la récupération initiale de la catégorie doit encore être renforcée.
+
+## Encodage des fichiers
+
+Les fichiers CSV sont écrits en UTF-8 afin de préserver les caractères
+accentués présents dans les titres et les descriptions.
