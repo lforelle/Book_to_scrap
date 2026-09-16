@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-import detail_livre
+import book_details
 from urllib.parse import urljoin
 
 def main():
@@ -18,6 +18,7 @@ def main():
     category = soup.find("head").find("title").string
     category = category.split('|')[0].strip()
     url_books_list_by_category["category"] = category
+    
     filename_category = "books_by_category_" + category + "_"
     filename_detail = "book_detail_"
 
@@ -35,19 +36,16 @@ def main():
     
     print("\n============= Extraction des url de chaque livre la catégorie ===============\n")
     print(url_books_list_by_category)
-    detail_livre.data_to_save_to_csv(filename_category, url_books_list_by_category)
+    book_details.data_to_save_to_csv(filename_category, url_books_list_by_category, "w")
      
 # Extraire les données produit de chaque livre de la catégorie
-    # Pour chaque lien de la liste on appel la fonction 
+    # Pour chaque lien de la liste on appelle la fonction main du script 'book_details' 
     print("\n============= Extraction des données produit de chaque livre de la catégorie ===============\n")
     for book_link in books_list:
         print(f"######## Traitement du livre : {book_link} ########\n")
-        detail_livre.main(book_link, filename_detail)
+        book_details.main(book_link, filename_detail)
         print(f"######### Fin du traitement : {book_link} #########\n")
-
-# inscrire les données dans un seul fichier CSV.
  
-  
 
 if __name__ == "__main__":
     main()
