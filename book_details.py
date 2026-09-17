@@ -7,24 +7,27 @@ from urllib.parse import urljoin
 
 def data_to_save_to_csv(filename, dico_infos, mode):
     # Generation du Timestamp
-    current_date_time = datetime.now().strftime("%Y%m%d_%H%M")
-
-    # Nom du fichier CSV a horodater
-    output_filename = filename + current_date_time + ".csv"
+    current_date_time = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     
-    # Vérifie si le fichier existe déjà
+    # Nom du fichier CSV a horodater
+    dir = "Books_details"
+    dir_exist = os.path.isdir(dir)
+    if not dir_exist:
+        os.mkdir(dir)
+    output_filename = dir + "/" + filename + current_date_time + ".csv"
+    
+    # On vérifie si le fichier existe déjà
     file_exists = os.path.isfile(output_filename)
 
     with open(output_filename, mode, newline="", encoding="utf-8") as output_csv:
-        # Les clefs en titre de colonnes
-        fieldnames = dico_infos.keys()
+        fieldnames = dico_infos.keys()    # Les clefs en titre de colonnes
         writer = csv.DictWriter(output_csv, fieldnames=fieldnames)
-        # Si le fichier n'a pas encore été créé, on ecrit les titres de colonnes
-        if not file_exists:
+        if not file_exists:    # Si le fichier n'a pas encore été créé, on y ecrit les titres de colonnes
             writer.writeheader()
         writer.writerow(dico_infos)
 
-def acces_page(url):
+def test_acces_page(url):
+    # On verifie que la page est accessible 
     response = requests.get(url)
     print(f"{url} -> {response.status_code}")
 
@@ -35,7 +38,8 @@ def acces_page(url):
 
 
 def main(url_book, filename):
-    soup = acces_page(url_book)
+    # par defaut, livre = 'a light in the attic'
+    soup = test_acces_page(url_book)
     if soup is None:
         print(f"Pas de données pour : {url_book}")
         return
@@ -77,15 +81,20 @@ def main(url_book, filename):
 
     # La description du livre se trouve dans le tag <p> qui suit le <h2> "Product Description"
     header_product_description = soup.find("h2", string="Product Description")
-    product_description = header_product_description.find_next("p")
-    dico_infos["product_description"] = product_description.text
+    if header_product_description:
+        product_description = header_product_description.find_next("p")
+        #dico_infos["product_description"] = product_description.get_text(strip=True)
+        dico_infos["product_description"] = "Recup Description commentée pour accelerer le processus"
+    else:
+        dico_infos["product_description"] = "No description found !!"
 
     # La catégorie du livre se trouve dans le tag <ul> de classe "breadcrumb"
     ul = soup.find("ul", class_="breadcrumb")
     for li in ul.find_all("li"):
-        a = li.find("a")
-        if a:
-            if a.string.lower() == "home" or a.string.lower() == "books":
+        a_category = li.find("a")
+        if a_category:
+            # je cherche un lien qui n'est ni le repertoire 'Home' ni son sous repertoire 'Books' 
+            if a_category.string.lower() == "home" or a_category.string.lower() == "books":
                 continue
             else:
                 category = li.find("a").text
@@ -94,25 +103,25 @@ def main(url_book, filename):
     # Recuperation du nb d'etoiles (review_rating)
     star_rating = soup.find("i", class_="icon-star").find_parent("p")
     review_rating = star_rating.get("class")
-    # La classe extraite est une liste
-    nb_stars_en = review_rating[1].lower()
+    nb_stars_en = review_rating[1].lower()    # La classe extraite est une liste
+
     # Conversion des notations string en numerique
     nb_stars = {"one":1, "two": 2, "three": 3, "four": 4, "five": 5}
     nb_stars_fr = nb_stars[nb_stars_en]
     dico_infos["review_rating"] = nb_stars_fr
     
-    # L'url de l'image
+    # Conversion de l'url de l'image en adresse absolue
     image_url = soup.find(id="product_gallery").find("img").get("src")
     src_image = image_url.split('../')[2]
     image_url = urljoin('https://books.toscrape.com/', src_image)
     dico_infos["image_url"] = image_url
     
-    print(dico_infos, "\n")
+    #print(dico_infos, "\n")
     data_to_save_to_csv(filename, dico_infos, "a")
 
 #================== Main script ===================
 
 if __name__ == "__main__":
     url_book = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
-    main(url_book, "book_detail_")
+    main(url_book, "book_details_")
 
