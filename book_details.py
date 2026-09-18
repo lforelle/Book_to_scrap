@@ -9,42 +9,43 @@ import re
 DETAILS_DIR = "Books_details"
 
 
-def data_to_save_to_csv(filename, dico_infos, mode):
-    # Generation d'un Timestamp
+def save_data_to_csv(filename, dico_infos, mode):
+    # Ajout d'un Timestamp dans les noms de fichiers si besoin:
     # current_date_time = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     
-    # Nom du fichier CSV a horodater
+    # Creation du dossier contenant les CSV du detail des livres
     os.makedirs(DETAILS_DIR, exist_ok=True)
     output_filename = os.path.join(DETAILS_DIR, filename + ".csv")
     
-    # On vérifie si le fichier existe déjà
+    # Si le fichier n'a pas encore été créé, la 1ere fois on y ecrit les titres de colonnes
     file_exists = os.path.isfile(output_filename)
 
     with open(output_filename, mode, newline="", encoding="utf-8") as output_csv:
         fieldnames = dico_infos.keys()    # Les clefs en titre de colonnes
         writer = csv.DictWriter(output_csv, fieldnames=fieldnames)
-        if not file_exists:    # Si le fichier n'a pas encore été créé, on y ecrit les titres de colonnes
+        if not file_exists:
             writer.writeheader()
         writer.writerow(dico_infos)
 
 
-def test_acces_page(url):
+def test_page_access(url):
     # On verifie que la page est accessible 
     response = requests.get(url)
     print(f"{url} -> {response.status_code}")
 
     if response.status_code == 200:
-        return BeautifulSoup(response.text, "html.parser")
+        return response
     print(f"ERREUR : impossible d'accéder à {url}")
     return None
 
 
 def main(url_book, filename):
     # Par defaut, livre = 'a light in the attic'
-    soup = test_acces_page(url_book)
-    if soup is None:
+    response = test_page_access(url_book)
+    if response is None:
         print(f"Pas de données pour : {url_book}")
         return
+    soup = BeautifulSoup(response.text, "html.parser")
         
     # La plupart des données du livre se trouve dans le tableau <table>
     table = soup.find("table", class_="table table-striped")
@@ -85,8 +86,7 @@ def main(url_book, filename):
     header_product_description = soup.find("h2", string="Product Description")
     if header_product_description:
         product_description = header_product_description.find_next("p")
-        #dico_infos["product_description"] = product_description.get_text(strip=True)
-        dico_infos["product_description"] = "Recup Description commentée pour accelerer le processus"
+        dico_infos["product_description"] = product_description.get_text(strip=True)
     else:
         dico_infos["product_description"] = "No description found !!"
 
@@ -123,11 +123,13 @@ def main(url_book, filename):
     # On conserve uniquement les 15 premiers caracteres du titre
     filename = filename + (safe_title)[:25] + "_"
 
-    data_to_save_to_csv(filename, dico_infos, "a")
+    save_data_to_csv(filename, dico_infos, "a")
 
     # Recuperation de l'image et sauvegarde dans le meme dossier que les 'csv'
-    response = requests.get(image_url)
-    response.raise_for_status()
+    response = test_page_access(image_url)
+    if response is None:
+        print(f"Pas de données pour : {image_url}")
+        return
     jpg_filename = DETAILS_DIR + "/" + filename + '.jpg'
     with open(jpg_filename, "wb") as image_file:
         image_file.write(response.content)

@@ -36,9 +36,11 @@ def pagination(soup, category_url):
 def main(category_url):
     # Par defaut, la categorie = 'young adult'
     # On verifie l'acces à la page de la catégorie
-    response = requests.get(category_url)
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, "html.parser")
+    response = book_details.test_page_access(category_url)
+    if response is None:
+        print(f"Pas de données pour : {category_url}")
+        return
+    soup = BeautifulSoup(response.text, "html.parser")
 
     books_url_list_by_category = {}     # Liste des URL de tous les livres d'une categorie
     books_url_list = []        # Liste
@@ -57,9 +59,10 @@ def main(category_url):
     next_page = pagination(soup, category_url)
 
     while next_page:
-        response = requests.get(next_page)
-        response.raise_for_status()
-
+        response = book_details.test_page_access(next_page)
+        if response is None:
+            print(f"Pas de données pour : {next_page}")
+            return
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Extraction des livres présents sur la nouvelle page
@@ -83,7 +86,7 @@ def main(category_url):
     os.chdir(category_dir)
 
     filename_category = "books_by_category_" + category_dir + "_"
-    book_details.data_to_save_to_csv(filename_category, books_url_list_by_category, "w")
+    book_details.save_data_to_csv(filename_category, books_url_list_by_category, "w")
 
     # Extraire les données produit de chaque livre de la catégorie
     # Pour chaque lien de la liste on appelle la fonction main du script 'book_details' 

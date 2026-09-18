@@ -2,9 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 import category
 from urllib.parse import urljoin
+import book_details
 
 
-def categories_urls_extract(categories_url_list):
+def categories_url_extract(categories_url_list):
     # On extrait l'URL de chaque livre de la catégorie
     # Les liens sont ajoutés dans la liste "books_url_list"  
     
@@ -17,9 +18,11 @@ def categories_urls_extract(categories_url_list):
 
 def main(site_url):
     # Par defaut le site est 'books_to_scrap'
-    response = requests.get(site_url)
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, "html.parser")
+    response = book_details.test_page_access(site_url)
+    if response is None:
+        print(f"Pas de données pour : {site_url}")
+        return
+    soup = BeautifulSoup(response.text, "html.parser")
 
     # Dans la page d'accueil du site, on recupere toutes les url des categories de la navbar  
     categories_url_list = []
@@ -31,7 +34,7 @@ def main(site_url):
         #print(categories, ":", href)
 
     # On boucle sur chaque categorie repertoriee, et on recupere la liste du lien url de chaque page categorie
-    category_pages_url = categories_urls_extract(categories_url_list)
+    category_pages_url = categories_url_extract(categories_url_list)
     print("\n",category_pages_url)
     for category_page_url in category_pages_url:
         # Acceder à la categorie et recuperer les url des livres de cette page
