@@ -6,16 +6,16 @@ import os
 from urllib.parse import urljoin
 import re
 
+DETAILS_DIR = "Books_details"
+
+
 def data_to_save_to_csv(filename, dico_infos, mode):
-    # Generation du Timestamp
-    current_date_time = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    # Generation d'un Timestamp
+    # current_date_time = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     
     # Nom du fichier CSV a horodater
-    dir = "Books_details"
-    dir_exist = os.path.isdir(dir)
-    if not dir_exist:
-        os.mkdir(dir)
-    output_filename = dir + "/" + filename + current_date_time + ".csv"
+    os.makedirs(DETAILS_DIR, exist_ok=True)
+    output_filename = os.path.join(DETAILS_DIR, filename + ".csv")
     
     # On vérifie si le fichier existe déjà
     file_exists = os.path.isfile(output_filename)
@@ -26,6 +26,7 @@ def data_to_save_to_csv(filename, dico_infos, mode):
         if not file_exists:    # Si le fichier n'a pas encore été créé, on y ecrit les titres de colonnes
             writer.writeheader()
         writer.writerow(dico_infos)
+
 
 def test_acces_page(url):
     # On verifie que la page est accessible 
@@ -39,16 +40,16 @@ def test_acces_page(url):
 
 
 def main(url_book, filename):
-    # par defaut, livre = 'a light in the attic'
+    # Par defaut, livre = 'a light in the attic'
     soup = test_acces_page(url_book)
     if soup is None:
         print(f"Pas de données pour : {url_book}")
         return
         
-    # la plupart des données du livre se trouve dans le tableau <table>
+    # La plupart des données du livre se trouve dans le tableau <table>
     table = soup.find("table", class_="table table-striped")
 
-    # les informations trouvées seront ajoutées dans un dictionnaire
+    # Les informations trouvées seront ajoutées dans un dictionnaire
     dico_infos = {}
     dico_infos["product_page_url"] = url_book
 
@@ -119,14 +120,21 @@ def main(url_book, filename):
     
     # On reformate le titre pour supprimer les caracteres interdits ainsi que les blancs
     safe_title = re.sub(r"[\\/:*?\"'(),.#@+&~=<>|\s]+", "_", title).strip("_")
-
     # On conserve uniquement les 15 premiers caracteres du titre
-    filename = filename + (safe_title)[:15] + "_"
+    filename = filename + (safe_title)[:25] + "_"
+
     data_to_save_to_csv(filename, dico_infos, "a")
+
+    # Recuperation de l'image et sauvegarde dans le meme dossier que les 'csv'
+    response = requests.get(image_url)
+    response.raise_for_status()
+    jpg_filename = DETAILS_DIR + "/" + filename + '.jpg'
+    with open(jpg_filename, "wb") as image_file:
+        image_file.write(response.content)
+
 
 #================== Main script ===================
 
 if __name__ == "__main__":
-    url_book = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
+    url_book = "https://books.toscrape.com/catalogue/the-argonauts_837/index.html"
     main(url_book, "details_")
-
