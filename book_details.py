@@ -4,6 +4,7 @@ import csv
 from datetime import datetime
 import os
 from urllib.parse import urljoin
+import re
 
 def data_to_save_to_csv(filename, dico_infos, mode):
     # Generation du Timestamp
@@ -116,12 +117,16 @@ def main(url_book, filename):
     image_url = urljoin('https://books.toscrape.com/', src_image)
     dico_infos["image_url"] = image_url
     
-    #print(dico_infos, "\n")
+    # On reformate le titre pour supprimer les caracteres interdits ainsi que les blancs
+    safe_title = re.sub(r"[\\/:*?\"'(),.#@+&~=<>|\s]+", "_", title).strip("_")
+
+    # On conserve uniquement les 15 premiers caracteres du titre
+    filename = filename + (safe_title)[:15] + "_"
     data_to_save_to_csv(filename, dico_infos, "a")
 
 #================== Main script ===================
 
 if __name__ == "__main__":
     url_book = "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
-    main(url_book, "book_details_")
+    main(url_book, "details_")
 

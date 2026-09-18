@@ -47,8 +47,6 @@ def main(category_url):
     category = category.split('|')[0].strip()
     books_url_list_by_category["category"] = category
     
-    filename_category = "books_by_category_" + category + "_"
-    filename_detail = "book_details_"
     books_url_extract(soup, books_url_list_by_category, books_url_list)
 
 # Page suivante
@@ -73,22 +71,25 @@ def main(category_url):
 
 
     print("\n============= Stockage CSV des url de chaque livre de la catégorie ===============\n")
-    
+ 
     csv_dir = os.path.join(PROJECT_ROOT, "csv_files")    # creation d'un repertoire pour ts les CSV
     if not os.path.isdir(csv_dir):
         os.mkdir(csv_dir)
     os.chdir(csv_dir)
 
-    category_dir = category    # creation dans le repertoire CSV d'un repertoire pour chaque categorie
+    category_dir = category.replace(' ', '_')    # creation dans le repertoire CSV d'un repertoire pour chaque categorie
     if not os.path.isdir(category_dir):
         os.mkdir(category_dir)
     os.chdir(category_dir)
 
+    filename_category = "books_by_category_" + category_dir + "_"
     book_details.data_to_save_to_csv(filename_category, books_url_list_by_category, "w")
 
 # Extraire les données produit de chaque livre de la catégorie
     # Pour chaque lien de la liste on appelle la fonction main du script 'book_details' 
     print("\n======= Extraction des données produit de chaque livre de la catégorie =======\n")
+
+    filename_detail = "details_"
     for book_link in books_url_list:
         print(f"####### Traitement du livre : {category} : {book_link}")
         book_details.main(book_link, filename_detail)
