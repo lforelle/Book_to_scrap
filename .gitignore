@@ -1,0 +1,6 @@
+csv_files.zip
+books_by_category_*.csv
+details_*.csv
+details_*.jpg
+*.pyc
+env/**
