@@ -6,22 +6,18 @@ import os
 from urllib.parse import urljoin
 import re
 
-DETAILS_DIR = "Books_details"
+DETAILS_DIR = "Books_details"     # Nom attribué au repertoire contenant les CSV des caracteristiques des livres
 
-
-def save_data_to_csv(filename, dico_infos, mode):
-    # Ajout d'un Timestamp dans les noms de fichiers si besoin:
-    # current_date_time = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    
-    # Creation du dossier contenant les CSV du detail des livres
+def save_book_data_to_csv(filename, dico_infos, mode):   
+    # Creation du repertoire et modele des noms de fichiers
     os.makedirs(DETAILS_DIR, exist_ok=True)
-    output_filename = os.path.join(DETAILS_DIR, filename + ".csv")
+    path_output_filename = os.path.join(DETAILS_DIR, filename + ".csv")
     
-    # Si le fichier n'a pas encore été créé, la 1ere fois on y ecrit les titres de colonnes
-    file_exists = os.path.isfile(output_filename)
+    # Si le fichier CSV n'a pas encore été créé, la 1ere fois on y ecrit les titres de colonnes
+    file_exists = os.path.isfile(path_output_filename)
 
-    with open(output_filename, mode, newline="", encoding="utf-8") as output_csv:
-        fieldnames = dico_infos.keys()    # Les clefs en titre de colonnes
+    with open(path_output_filename, mode, newline="", encoding="utf-8") as output_csv:
+        fieldnames = dico_infos.keys()    # Les clefs du dico en titre de colonnes
         writer = csv.DictWriter(output_csv, fieldnames=fieldnames)
         if not file_exists:
             writer.writeheader()
@@ -39,20 +35,19 @@ def test_page_access(url):
     return None
 
 
-def main(url_book, filename):
-    # Par defaut, livre = 'a light in the attic'
-    response = test_page_access(url_book)
+def main(book_href, filename):
+    response = test_page_access(book_href)
     if response is None:
-        print(f"Pas de données pour : {url_book}")
+        print(f"Pas de données pour : {book_href}")
         return
     soup = BeautifulSoup(response.text, "html.parser")
         
-    # La plupart des données du livre se trouve dans le tableau <table>
+    # La plupart des données relatives livre se trouve dans le tableau <table>
     table = soup.find("table", class_="table table-striped")
 
-    # Les informations trouvées seront ajoutées dans un dictionnaire
+    # Les informations trouvées sont ajoutées dans un dictionnaire
     dico_infos = {}
-    dico_infos["product_page_url"] = url_book
+    dico_infos["product_page_url"] = book_href
 
     # On boucle sur les lignes <tr> et <th> du tableau. Si le contenu <th> match le motif
     # alors on copie le texte <td> correspondant dans le dico
@@ -83,24 +78,24 @@ def main(url_book, filename):
     dico_infos["title"] = title
 
     # La description du livre se trouve dans le tag <p> qui suit le <h2> "Product Description"
-    header_product_description = soup.find("h2", string="Product Description")
-    if header_product_description:
-        product_description = header_product_description.find_next("p")
+    h2_product_description = soup.find("h2", string="Product Description")
+    if h2_product_description:
+        product_description = h2_product_description.find_next("p")
         dico_infos["product_description"] = product_description.get_text(strip=True)
     else:
         dico_infos["product_description"] = "No description found !!"
 
-    # La catégorie du livre se trouve dans le tag <ul> de classe "breadcrumb"
-    ul = soup.find("ul", class_="breadcrumb")
-    for li in ul.find_all("li"):
-        a_category = li.find("a")
-        if a_category:
-            # je cherche un lien qui n'est ni le repertoire 'Home' ni son sous repertoire 'Books' 
-            if a_category.string.lower() == "home" or a_category.string.lower() == "books":
+    # La catégorie du livre se trouve dans un tag <li> dans le tag <ul> de classe "breadcrumb"
+    ul_breadcrumb = soup.find("ul", class_="breadcrumb")
+    for li in ul_breadcrumb.find_all("li"):
+        a = li.find("a")
+        if a:
+            # Je cherche un lien qui n'est ni le repertoire 'Home' ni son sous repertoire 'Books' 
+            if a.string.lower() == "home" or a.string.lower() == "books":
                 continue
             else:
-                category = li.find("a").text
-                dico_infos["category"] = category
+                book_category = li.find("a").text
+                dico_infos["category"] = book_category
 
     # Recuperation du nb d'etoiles (review_rating)
     star_rating = soup.find("i", class_="icon-star").find_parent("p")
@@ -112,31 +107,30 @@ def main(url_book, filename):
     nb_stars_fr = nb_stars[nb_stars_en]
     dico_infos["review_rating"] = nb_stars_fr
     
-    # Conversion de l'url de l'image en adresse absolue
+    # Conversion de l'url de l'image trouvee en adresse absolue
     image_url = soup.find(id="product_gallery").find("img").get("src")
     src_image = image_url.split('../')[2]
     image_url = urljoin('https://books.toscrape.com/', src_image)
     dico_infos["image_url"] = image_url
     
-    # On reformate le titre pour supprimer les caracteres interdits ainsi que les blancs
-    safe_title = re.sub(r"[\\/:*?\"'(),.#@+&~=<>|\s]+", "_", title).strip("_")
-    # On conserve uniquement les 15 premiers caracteres du titre
-    filename = filename + (safe_title)[:25] + "_"
-
-    save_data_to_csv(filename, dico_infos, "a")
+    # On utilise le titre du livre reformaté pour le nom de fichier 'csv'
+    # On accepte uniquement les caractères alphanumériques ASCII. Tous les autres caractères sont remplacés par "_"
+    safe_title = re.sub(r"[^a-zA-Z0-9]+", "_", title).strip("_")
+    filename = filename + (safe_title)[:25] + "_"     # 25 premiers caracteres du titre seulement
+    save_book_data_to_csv(filename, dico_infos, "a")
 
     # Recuperation de l'image et sauvegarde dans le meme dossier que les 'csv'
     response = test_page_access(image_url)
     if response is None:
         print(f"Pas de données pour : {image_url}")
         return
-    jpg_filename = DETAILS_DIR + "/" + filename + '.jpg'
-    with open(jpg_filename, "wb") as image_file:
+    path_jpg_filename = DETAILS_DIR + "/" + filename + '.jpg'
+    with open(path_jpg_filename, "wb") as image_file:
         image_file.write(response.content)
 
 
 #================== Main script ===================
 
 if __name__ == "__main__":
-    url_book = "https://books.toscrape.com/catalogue/the-argonauts_837/index.html"
-    main(url_book, "details_")
+    book_href = "https://books.toscrape.com/catalogue/the-argonauts_837/index.html"
+    main(book_href, "details_")

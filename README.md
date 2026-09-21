@@ -1,14 +1,19 @@
 # Scraper Books to Scrape
 
-Ce projet permet de récupérer des informations sur les livres du site [Books to Scrape](https://books.toscrape.com/) et de les enregistrer dans des fichiers CSV, ainsi que les images associées.
+Ce projet permet de récupérer les informations des livres du site [Books to
+Scrape](https://books.toscrape.com/), de les enregistrer dans des fichiers CSV
+et de télécharger les images associées.
 
 ## Présentation
 
 Le projet est organisé en trois scripts Python :
 
-- [`book_details.py`](book_details.py) : extrait les détails d'un livre donné.
-- [`category.py`](category.py) : parcourt tous les livres d'une catégorie, y compris les pages de pagination.
-- [`all_categories.py`](all_categories.py) : récupère toutes les catégories du site et lance l'extraction pour chacune d'elles.
+- [`book_details.py`](book_details.py) : extrait et sauvegarde les détails d'un
+  livre donné, ainsi que son image ;
+- [`category.py`](category.py) : parcourt tous les livres d'une catégorie, y
+  compris les pages de pagination, puis lance l'extraction détaillée ;
+- [`all_categories.py`](all_categories.py) : récupère toutes les catégories du
+  site et lance l'extraction pour chacune d'elles.
 
 ## Fonctionnalités
 
@@ -22,7 +27,8 @@ Le script [`book_details.py`](book_details.py) :
 - extrait le titre, la description, la catégorie et la note ;
 - convertit l'URL relative de l'image en URL absolue ;
 - sauvegarde les données dans un fichier CSV ;
-- télécharge l'image correspondante dans le même dossier de sortie.
+- télécharge l'image correspondante dans le même dossier de sortie ;
+- limite le titre utilisé dans le nom du fichier à ses 25 premiers caractères.
 
 Les colonnes exploitées sont les suivantes :
 
@@ -51,8 +57,8 @@ Le script [`category.py`](category.py) :
 - consulte la page d'une catégorie ;
 - récupère les liens de tous les livres présents sur cette page ;
 - suit la pagination tant qu'une page suivante existe ;
-- sauvegarde la liste des URLs dans un CSV de catégorie ;
-- appelle ensuite [`book_details.py`](book_details.py) pour chaque titre trouvé ;
+- sauvegarde la liste des URLs dans un CSV de catégorie, sur une seule ligne ;
+- appelle ensuite [`book_details.py`](book_details.py) pour chaque URL trouvée ;
 - crée le dossier `Books_details/` dans le dossier de catégorie afin de stocker les fichiers détaillés.
 
 ### 3. Extraction de toutes les catégories
@@ -70,14 +76,17 @@ Les résultats sont organisés comme suit :
 
 ```text
 csv_files/
-└── <Categorie>/
-    ├── books_by_category_<Categorie>_.csv
+└── <categorie>/
     └── Books_details/
+        ├── books_by_category_<categorie>_.csv
         ├── details_<titre>_.csv
         └── details_<titre>_.jpg
 ```
 
-Le nom du fichier CSV de détail est construit à partir du titre, en supprimant les caractères interdits et en normalisant les espaces en underscores.
+Le nom du répertoire de catégorie remplace les espaces par des underscores.
+Les noms de fichiers de détail sont construits avec le préfixe `details_`,
+suivi du titre nettoyé : les caractères qui ne sont pas alphanumériques ASCII
+sont remplacés par des underscores et le titre est limité à 25 caractères.
 
 ## Installation
 
@@ -128,7 +137,8 @@ Le script utilise par défaut cette URL :
 https://books.toscrape.com/catalogue/the-argonauts_837/index.html
 ```
 
-Le résultat est enregistré dans le dossier `Books_details/` du répertoire courant, sous le format :
+Le résultat est enregistré dans le dossier `Books_details/` du répertoire
+courant, sous les formats :
 
 ```text
 details_<titre>_.csv
@@ -152,11 +162,12 @@ Par défaut, le script traite la catégorie suivante :
 https://books.toscrape.com/catalogue/category/books/sequential-art_5/page-1.html
 ```
 
-Les fichiers créés dans `csv_files/<Categorie>/` sont :
+Les fichiers créés dans `csv_files/<Categorie>/Books_details/` sont :
 
-1. `books_by_category_<Categorie>_.csv` : liens des livres de la catégorie ;
-2. `Books_details/details_<titre>_.csv` : informations détaillées de chaque livre ;
-3. `Books_details/details_<titre>_.jpg` : image du livre.
+1. `books_by_category_<Categorie>_.csv` : liens des livres de la catégorie,
+   écrits sur une seule ligne ;
+2. `details_<titre>_.csv` : informations détaillées de chaque livre ;
+3. `details_<titre>_.jpg` : image du livre.
 
 ### Extraire toutes les catégories
 
@@ -171,10 +182,13 @@ Cette commande parcourt la page d'accueil du site, récupère toutes les catégo
 - Les fichiers sont écrits en UTF-8 pour gérer correctement les caractères spéciaux.
 - Le répertoire racine du projet est calculé avec `os.path.dirname(os.path.abspath(__file__))`, ce qui permet à l'application de fonctionner même si elle est lancée depuis un autre dossier.
 - Les URLs relatives sont converties en URLs absolues avant d'être stockées ou utilisées.
-- La logique de sauvegarde des fichiers est centralisée dans `save_data_to_csv()`, ce qui évite de dupliquer la gestion CSV dans plusieurs scripts.
+- La fonction `test_page_access()` centralise les requêtes HTTP et vérifie le
+  code de statut `200` avant de poursuivre l'analyse.
+- La fonction `save_book_data_to_csv()` écrit l'en-tête du CSV uniquement lors
+  de la création du fichier, puis ajoute les données du livre.
+- La fonction `save_category_href_to_csv()` utilise le module standard `csv`
+  pour écrire la liste des URLs de la catégorie.
+- Les fichiers CSV et JPG sont écrits en UTF-8 ou en mode binaire selon leur
+  contenu.
 
-## Limites connues
 
-- Les URLs de départ sont codées en dur dans les scripts ; elles ne sont pas configurées via argument en ligne de commande.
-- La gestion des erreurs réseau est basique et se limite à un contrôle du code HTTP.
-- Le script ne traite pas d'options avancées de configuration ni de reprise de traitement en cas d'interruption.
