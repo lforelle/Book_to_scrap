@@ -35,10 +35,10 @@ def test_page_access(url):
     return None
 
 
-def main(book_href, filename):
-    response = test_page_access(book_href)
+def main(book_url, filename):
+    response = test_page_access(book_url)
     if response is None:
-        print(f"Pas de données pour : {book_href}")
+        print(f"Pas de données pour : {book_url}")
         return
     soup = BeautifulSoup(response.text, "html.parser")
         
@@ -47,7 +47,7 @@ def main(book_href, filename):
 
     # Les informations trouvées sont ajoutées dans un dictionnaire
     dico_infos = {}
-    dico_infos["product_page_url"] = book_href
+    dico_infos["product_page_url"] = book_url
 
     # On boucle sur les lignes <tr> et <th> du tableau. Si le contenu <th> match le motif
     # alors on copie le texte <td> correspondant dans le dico
@@ -107,7 +107,7 @@ def main(book_href, filename):
     nb_stars_fr = nb_stars[nb_stars_en]
     dico_infos["review_rating"] = nb_stars_fr
     
-    # Conversion de l'url de l'image trouvee en adresse absolue
+    # Conversion de l'url de l'image trouvee en url absolue
     image_url = soup.find(id="product_gallery").find("img").get("src")
     src_image = image_url.split('../')[2]
     image_url = urljoin('https://books.toscrape.com/', src_image)
@@ -132,5 +132,5 @@ def main(book_href, filename):
 #================== Main script ===================
 
 if __name__ == "__main__":
-    book_href = "https://books.toscrape.com/catalogue/the-argonauts_837/index.html"
-    main(book_href, "details_")
+    book_url = "https://books.toscrape.com/catalogue/the-argonauts_837/index.html"
+    main(book_url, "details_")

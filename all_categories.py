@@ -4,17 +4,17 @@ from urllib.parse import urljoin
 import book_details
 
 
-def books_href_extract(all_categories_href_list):
-    # On extrait l'URL des livres de chaque catégorie et on les ajoute dans une liste
-    one_category_books_href_list=[]
+def absolute_url_extract(all_categories_href_list):
+    # On extrait l'URL absolue de chaque catégorie et on les liste
+    all_categories_absolute_url_list=[]
     for url in all_categories_href_list:
-        category_url = urljoin('https://books.toscrape.com/', url)
-        one_category_books_href_list.append(category_url)
-    return one_category_books_href_list
+        category_absolute_url = urljoin('https://books.toscrape.com/', url)
+        all_categories_absolute_url_list.append(category_absolute_url)
+    return all_categories_absolute_url_list
 
 
 def main(site_url):
-    # On verifie l'acces au site
+    # On verifie l'acces au site "https://books.toscrape.com/"
     response = book_details.test_page_access(site_url)
     if response is None:
         print(f"Pas de données pour : {site_url}")
@@ -28,12 +28,12 @@ def main(site_url):
         href = li.find("a").get("href")
         all_categories_href_list.append(href)
 
-    # On boucle sur chaque categorie de la navbar, et on liste les liens url des livres contenus dans chaque categorie
-    category_pages_href = books_href_extract(all_categories_href_list)
-    print("\n",category_pages_href)
-    for category_page_href in category_pages_href:
-        # Acceder à la page de la categorie et recuperer les href des livres de la page
-        category.main(category_page_href)
+    # On boucle sur chaque categorie de la navbar, et on liste les liens url absolus de chaque categorie
+    all_categories_absolute_url = absolute_url_extract(all_categories_href_list)
+    print("\n",all_categories_absolute_url)
+    for category_url in all_categories_absolute_url:
+        # On accede à la page de la categorie pour recuperer les href des livres de la page
+        category.main(category_url)
  
 
 #================== Main script ===================

@@ -8,17 +8,17 @@ import csv
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
-def book_href_extract(soup, one_category_books_href_list):
+def books_href_extract(soup, one_category_books_href_list):
     # On extrait l'URL de chaque livre de la catégorie dans la <div> "image_container"
     ol = soup.find("ol", class_="row")
     for li in ol.find_all("li", class_="col-xs-6 col-sm-4 col-md-3 col-lg-3"):
         image_container_href = li.find("div", class_="image_container").find("a").get("href")
         image_container_href = image_container_href.split('../')[3]    # on supprime les '../' pour adresser l'url absolue
-        book_href = urljoin('https://books.toscrape.com/catalogue/', image_container_href)
-        one_category_books_href_list.append(book_href)
+        book_url = urljoin('https://books.toscrape.com/catalogue/', image_container_href)
+        one_category_books_href_list.append(book_url)
 
 
-def pagination(soup, category_page_href):
+def find_next_page_url(soup, category_page_href):
     # On verifie la presence de la classe 'pager'
     ul_pager = soup.find("ul", class_="pager")
     if ul_pager == None:
@@ -28,7 +28,7 @@ def pagination(soup, category_page_href):
     li_next = ul_pager.find("li", class_="next")
     if li_next:
         href_page = li_next.find("a").get("href")
-        return urljoin(category_page_href, href_page)  
+        return urljoin(category_page_href, href_page)  # Combinaison des 2 urls pour remplacer la page courante
     return False    # Si pas de bouton 'next' trouve, alors on retourne False
 
 
@@ -49,19 +49,18 @@ def main(category_page_href):
         return
     soup = BeautifulSoup(response.text, "html.parser")
 
-    one_category_books_href_list = []
+    one_category_books_href_list = []    # liste des url des livres pour une categorie
     next_page = False
 
-    # On recupere la catégorie des livres dans le <head> et on la stocke dans le dico
-    category = soup.find("head").find("title").string
-    category = category.split('|')[0].strip()
+    # On recupere le nom de la catégorie des livres
+    category_name = soup.find("head").find("title").string
+    category_name = category_name.split('|')[0].strip()
     
-    book_href_extract(soup, one_category_books_href_list)
+    books_href_extract(soup, one_category_books_href_list)
 
-    # Page suivante
-    # On recherche la presence d'une balise <a> avec un intitulé 'next' 
+    # Presence de pages supplémentaires: On recherche la presence d'une balise <a> avec un intitulé 'next' 
     # Si ca match, on remplace le fichier html de la page courante par le href renseigné dans ce tag    
-    next_page = pagination(soup, category_page_href)
+    next_page = find_next_page_url(soup, category_page_href)
 
     while next_page:
         response = book_details.test_page_access(next_page)
@@ -71,13 +70,13 @@ def main(category_page_href):
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Extraction des livres présents sur la nouvelle page
-        book_href_extract(soup, one_category_books_href_list)
+        books_href_extract(soup, one_category_books_href_list)
 
-        # La page actuelle devient la page précédemment téléchargée
+        # La page actuelle devient la 'next_page' chargée
         category_page_href = next_page
 
-        # Recherche de la page suivante à partir du nouveau soup
-        next_page = pagination(soup, category_page_href)
+        # Recherche si une autre 'page suivante' existe
+        next_page = find_next_page_url(soup, category_page_href)
 
     # Stockage dans un CSV des url de chaque livre de la catégorie
     csv_dir = os.path.join(PROJECT_ROOT, "csv_files")    # Creation d'un repertoire pour tous les CSV
@@ -85,26 +84,25 @@ def main(category_page_href):
         os.mkdir(csv_dir)
     os.chdir(csv_dir)
 
-    category_dir = category.replace(' ', '_')    # Creation d'un sous-repertoire pour chaque categorie
+    category_dir = category_name.replace(' ', '_')    # Creation d'un sous-repertoire au nom de chaque categorie
     if not os.path.isdir(category_dir):
         os.mkdir(category_dir)
     os.chdir(category_dir)
 
-    filename_category = "books_by_category_" + category_dir + "_"
-    save_category_href_to_csv(filename_category, one_category_books_href_list, "w")
+    category_filename = "books_by_category_" + category_dir + "_"    # Nom du fichier des url des categories
+    save_category_href_to_csv(category_filename, one_category_books_href_list, "w")
 
-    # Extraire les données produit de chaque livre de la catégorie
     # Pour chaque lien de la liste on appelle la fonction main du script 'book_details' 
     print("======= Extraction des données produit de chaque livre de la catégorie =======\n")
-    filename_detail = "details_"
-    print(f"####### livre(s) dans {category}")
-    for book_href in one_category_books_href_list:
-        book_details.main(book_href, filename_detail)
-    print(f"####### Fichiers CSV de la categorie {category} créés #######\n")
+    details_filename = "details_"
+    print(f"####### livre(s) dans {category_name}")
+    for book_url in one_category_books_href_list:
+        book_details.main(book_url, details_filename)
+    print(f"####### Fichiers CSV de la categorie {category_name} créés #######\n")
 
-    # Retour dans le repertoire parent
+    # Retour dans le repertoire parent 'csv_files'
     os.chdir("./..")
-    
+   
 
 #================== Main script ===================
 
