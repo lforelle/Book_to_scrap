@@ -1,7 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
 import csv
-from datetime import datetime
 import os
 from urllib.parse import urljoin
 import re
@@ -117,6 +116,9 @@ def main(book_url, filename):
         print(f"Pas de données pour : {image_url}")
         return
     path_jpg_filename = DETAILS_DIR + "/" + filename + '.jpg'
+    jpg_file_exists = os.path.isfile(path_jpg_filename)
+    if jpg_file_exists:
+        return
     with open(path_jpg_filename, "wb") as image_file:
         image_file.write(response.content)
 

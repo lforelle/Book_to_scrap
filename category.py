@@ -51,7 +51,7 @@ def main(category_page_href):
     
     books_href_extract(soup, one_category_books_href_list)
 
-    # Presence de pages supplémentaires  
+    # Verification de presence de pages supplémentaires  
     next_page = find_next_page_url(soup, category_page_href)
     while next_page:
         response = book_details.test_page_access(next_page)
@@ -82,9 +82,11 @@ def main(category_page_href):
 
     print("======= Extraction des données produit de chaque livre de la catégorie =======\n")
     details_filename = "details_"
+
     print(f"####### livre(s) dans {category_name}")
     for book_url in one_category_books_href_list:
         book_details.main(book_url, details_filename)
+        
     print(f"####### Fichiers CSV de la categorie {category_name} créés #######\n")
 
     os.chdir("./..")

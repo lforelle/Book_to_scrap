@@ -44,6 +44,9 @@ Les colonnes exploitées sont les suivantes :
 - `review_rating`
 - `image_url`
 
+La note est convertie en nombre entier de 1 à 5 à partir de la classe CSS
+présente dans la page du livre.
+
 Si une description n'est pas présente, le script remplace la valeur par :
 
 ```text
@@ -60,6 +63,10 @@ Le script [`category.py`](category.py) :
 - sauvegarde la liste des URLs dans un CSV de catégorie, sur une seule ligne ;
 - appelle ensuite [`book_details.py`](book_details.py) pour chaque URL trouvée ;
 - crée le dossier `Books_details/` dans le dossier de catégorie afin de stocker les fichiers détaillés.
+
+Les chemins relatifs des livres et des images sont normalisés avant leur
+conversion en URL absolue. L'extraction conserve le dernier élément du chemin,
+ce qui évite de dépendre d'une profondeur fixe (`split('../')[-1]`).
 
 ### 3. Extraction de toutes les catégories
 
@@ -169,6 +176,8 @@ Les fichiers créés dans `csv_files/<Categorie>/Books_details/` sont :
 2. `details_<titre>_.csv` : informations détaillées de chaque livre ;
 3. `details_<titre>_.jpg` : image du livre.
 
+Si l'image existe déjà, elle n'est pas téléchargée à nouveau.
+
 ### Extraire toutes les catégories
 
 ```bash
@@ -182,6 +191,8 @@ Cette commande parcourt la page d'accueil du site, récupère toutes les catégo
 - Les fichiers sont écrits en UTF-8 pour gérer correctement les caractères spéciaux.
 - Le répertoire racine du projet est calculé avec `os.path.dirname(os.path.abspath(__file__))`, ce qui permet à l'application de fonctionner même si elle est lancée depuis un autre dossier.
 - Les URLs relatives sont converties en URLs absolues avant d'être stockées ou utilisées.
+- L'extraction des URLs ne dépend pas d'un nombre fixe de segments `../`.
+- Les images existantes sont conservées afin d'éviter des téléchargements inutiles.
 - La fonction `test_page_access()` centralise les requêtes HTTP et vérifie le
   code de statut `200` avant de poursuivre l'analyse.
 - La fonction `save_book_data_to_csv()` écrit l'en-tête du CSV uniquement lors
@@ -190,5 +201,4 @@ Cette commande parcourt la page d'accueil du site, récupère toutes les catégo
   pour écrire la liste des URLs de la catégorie.
 - Les fichiers CSV et JPG sont écrits en UTF-8 ou en mode binaire selon leur
   contenu.
-
 
